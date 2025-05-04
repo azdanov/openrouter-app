@@ -12,7 +12,7 @@ export default async function Home() {
       {session?.user?.email && (
         <>
           <Separator className="my-5" />
-          <Chat />
+          <Chat userEmail={session.user.email} />
         </>
       )}
     </main>

@@ -1,5 +1,6 @@
 "use server";
 
+import { CompletionMessage } from "@/types";
 import OpenAI from "openai";
 
 const openai = new OpenAI({
@@ -11,14 +12,9 @@ const openai = new OpenAI({
   },
 });
 
-export interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
-
 export async function getCompletion(
-  messageHistory: Message[],
-): Promise<{ messages: Message[] }> {
+  messageHistory: CompletionMessage[],
+): Promise<CompletionMessage> {
   const completion = await openai.chat.completions.create({
     model: process.env.OPENROUTER_API_MODEL || "openai/gpt-4o-mini",
     messages: messageHistory,
@@ -33,12 +29,7 @@ export async function getCompletion(
   }
 
   return {
-    messages: [
-      ...messageHistory,
-      {
-        role: completion.choices[0].message.role,
-        content: completion.choices[0].message.content,
-      },
-    ],
+    role: completion.choices[0].message.role,
+    content: completion.choices[0].message.content,
   };
 }
