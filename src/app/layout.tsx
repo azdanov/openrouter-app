@@ -30,7 +30,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
         <div className="bg-neutral-800">
           <header className="container mx-auto flex items-center justify-between p-2 md:p-5 text-white space-x-16">
@@ -67,9 +67,14 @@ export default async function RootLayout({
             </nav>
           </header>
         </div>
-        <main className="container mx-auto flex flex-col md:flex-row p-2 md:p-5">
-          <div className="grow">{children}</div>
+        <main className="container mx-auto p-2 md:p-5 flex-1 flex flex-col">
+          {children}
         </main>
+        <footer className="flex items-center justify-center container mx-auto p-2 md:p-5 md:-mt-5 text-neutral-500">
+          <p className="text-center">
+            &copy; {new Date().getFullYear()} OpenRouter Chat
+          </p>
+        </footer>
       </body>
     </html>
   );

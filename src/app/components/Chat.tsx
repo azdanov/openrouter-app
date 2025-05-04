@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import * as ChatDB from "@/db";
 import { cn } from "@/lib/utils";
 import type { Chat, Message } from "@/types";
+import { Trash2, Send, Plus } from "lucide-react";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 
 interface ChatClientComponentProps {
@@ -41,6 +42,19 @@ export default function Chat({ userEmail }: ChatClientComponentProps) {
     }
   }, [userEmail]);
 
+  const loadMessages = useCallback(async (chatId: number) => {
+    setIsLoadingMessages(true);
+    try {
+      const messages = await ChatDB.getMessages(chatId);
+      setCurrentMessages(messages);
+    } catch (error) {
+      console.error(`Failed to load messages for chat ${chatId}:`, error);
+      setCurrentMessages([]);
+    } finally {
+      setIsLoadingMessages(false);
+    }
+  }, []);
+
   useEffect(() => {
     loadChats();
   }, [loadChats]);
@@ -51,24 +65,8 @@ export default function Chat({ userEmail }: ChatClientComponentProps) {
       return;
     }
 
-    const loadMessages = async () => {
-      setIsLoadingMessages(true);
-      try {
-        const messages = await ChatDB.getMessages(currentChatId);
-        setCurrentMessages(messages);
-      } catch (error) {
-        console.error(
-          `Failed to load messages for chat ${currentChatId}:`,
-          error,
-        );
-        setCurrentMessages([]);
-      } finally {
-        setIsLoadingMessages(false);
-      }
-    };
-
-    loadMessages();
-  }, [currentChatId]);
+    loadMessages(currentChatId);
+  }, [currentChatId, loadMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -101,9 +99,13 @@ export default function Chat({ userEmail }: ChatClientComponentProps) {
 
   const handleDeleteChat = async (chatIdToDelete: number | undefined) => {
     if (chatIdToDelete === undefined) return;
+
+    const chatToDelete = chats.find((c) => c.id === chatIdToDelete);
+    if (!chatToDelete) return;
+
     if (
       confirm(
-        `Are you sure you want to delete chat "${chats.find((c) => c.id === chatIdToDelete)?.name}"? This cannot be undone.`,
+        `Are you sure you want to delete chat "${chatToDelete.name}"? This cannot be undone.`,
       )
     ) {
       setIsLoadingChats(true);
@@ -185,14 +187,12 @@ export default function Chat({ userEmail }: ChatClientComponentProps) {
       setCurrentMessages((prev) => [...prev, errorMsg]);
     } finally {
       setIsSending(false);
-      const finalMessages = await ChatDB.getMessages(currentChatId);
-      setCurrentMessages(finalMessages);
+      await loadMessages(currentChatId);
     }
   };
 
   return (
-    <div className="flex h-[calc(100vh-100px)] border rounded-md">
-      {" "}
+    <div className="flex flex-1 border rounded-md">
       <div className="w-1/4 border-r flex flex-col">
         <div className="p-2 border-b">
           <Button
@@ -200,7 +200,13 @@ export default function Chat({ userEmail }: ChatClientComponentProps) {
             className="w-full"
             disabled={isLoadingChats}
           >
-            {isLoadingChats ? "Loading..." : "New Chat"}
+            {isLoadingChats ? (
+              "Loading..."
+            ) : (
+              <span className="flex items-center gap-2">
+                <Plus size={16} /> New Chat
+              </span>
+            )}
           </Button>
         </div>
         <ScrollArea className="flex-grow p-2">
@@ -216,68 +222,37 @@ export default function Chat({ userEmail }: ChatClientComponentProps) {
           )}
           <ul>
             {chats.map((chat) => (
-              <li
+              <ChatListItem
                 key={chat.id}
-                className={cn(
-                  "p-2 mb-1 rounded cursor-pointer hover:bg-gray-100 flex justify-between items-center",
-                  { "bg-indigo-100": chat.id === currentChatId },
-                )}
-                onClick={() => handleSelectChat(chat.id)}
-              >
-                <span className="truncate flex-grow mr-2">{chat.name}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 h-auto"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteChat(chat.id);
-                  }}
-                  disabled={isLoadingChats}
-                  title="Delete chat"
-                >
-                  ✕
-                </Button>
-              </li>
+                chat={chat}
+                isActive={chat.id === currentChatId}
+                onSelect={() => handleSelectChat(chat.id)}
+                onDelete={() => handleDeleteChat(chat.id)}
+                isLoading={isLoadingChats}
+              />
             ))}
           </ul>
         </ScrollArea>
       </div>
       <div className="w-3/4 flex flex-col">
         {currentChatId === null ? (
-          <div className="flex-grow flex items-center justify-center text-gray-500">
+          <div className="flex-grow flex items-center justify-center text-neutral-500">
             Select a chat or create a new one to start messaging.
           </div>
         ) : (
           <>
             <ScrollArea className="flex-grow p-4 space-y-4">
               {isLoadingMessages ? (
-                <p className="text-center text-sm text-gray-500">
+                <p className="text-center text-sm text-neutral-500">
                   Loading messages...
                 </p>
               ) : (
                 <>
                   {currentMessages.map((message, i) => (
-                    <div
+                    <ChatMessage
                       key={message.id ?? `msg-${i}`}
-                      className={cn("flex flex-col", {
-                        "items-end": message.role === "user",
-                        "items-start": message.role === "assistant",
-                      })}
-                    >
-                      <div
-                        className={cn(
-                          "max-w-[75%] rounded-lg py-2 px-4 whitespace-pre-wrap",
-                          {
-                            "bg-indigo-600 text-white": message.role === "user",
-                            "bg-neutral-200 text-neutral-900":
-                              message.role === "assistant",
-                          },
-                        )}
-                      >
-                        {message.content}
-                      </div>
-                    </div>
+                      message={message}
+                    />
                   ))}
                   <div ref={messagesEndRef} />
                 </>
@@ -305,7 +280,13 @@ export default function Chat({ userEmail }: ChatClientComponentProps) {
                   isSending || isLoadingMessages || !inputMessage.trim()
                 }
               >
-                {isSending ? "Sending..." : "Send"}
+                {isSending ? (
+                  "Sending..."
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Send size={16} /> Send
+                  </span>
+                )}
               </Button>
             </div>
           </>
@@ -314,3 +295,58 @@ export default function Chat({ userEmail }: ChatClientComponentProps) {
     </div>
   );
 }
+
+const ChatMessage = ({ message }: { message: Message }) => (
+  <div
+    className={cn("flex flex-col", {
+      "items-end": message.role === "user",
+      "items-start": message.role === "assistant",
+    })}
+  >
+    <div
+      className={cn("max-w-[75%] rounded-lg py-2 px-4 whitespace-pre-wrap", {
+        "bg-indigo-600 text-white": message.role === "user",
+        "bg-neutral-200 text-neutral-900": message.role === "assistant",
+      })}
+    >
+      {message.content}
+    </div>
+  </div>
+);
+
+const ChatListItem = ({
+  chat,
+  isActive,
+  onSelect,
+  onDelete,
+  isLoading,
+}: {
+  chat: Chat;
+  isActive: boolean;
+  onSelect: () => void;
+  onDelete: () => void;
+  isLoading: boolean;
+}) => (
+  <li
+    className={cn(
+      "p-2 mb-1 rounded cursor-pointer hover:bg-gray-100 flex justify-between items-center",
+      { "bg-indigo-100": isActive },
+    )}
+    onClick={onSelect}
+  >
+    <span className="truncate flex-grow mr-2">{chat.name}</span>
+    <Button
+      variant="ghost"
+      size="sm"
+      className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 h-auto"
+      onClick={(e) => {
+        e.stopPropagation();
+        onDelete();
+      }}
+      disabled={isLoading}
+      title="Delete chat"
+    >
+      <Trash2 size={16} />
+    </Button>
+  </li>
+);

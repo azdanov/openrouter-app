@@ -6,15 +6,11 @@ export default async function Home() {
   const session = await auth();
 
   return (
-    <main>
+    <>
       <h1 className="text-4xl font-bold">Welcome to OpenRouter Chat</h1>
+      <Separator className="my-5" />
       {!session?.user?.email && <div>You need to log in to use this chat.</div>}
-      {session?.user?.email && (
-        <>
-          <Separator className="my-5" />
-          <Chat userEmail={session.user.email} />
-        </>
-      )}
-    </main>
+      {session?.user?.email && <Chat userEmail={session.user.email} />}
+    </>
   );
 }
