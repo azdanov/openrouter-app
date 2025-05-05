@@ -22,49 +22,50 @@ interface ChatAppDBSchema extends DBSchema {
 let dbPromise: Promise<IDBPDatabase<ChatAppDBSchema>> | null = null;
 
 function getDb(): Promise<IDBPDatabase<ChatAppDBSchema>> {
-  if (!dbPromise) {
-    dbPromise = openDB<ChatAppDBSchema>(DB_NAME, DB_VERSION, {
-      upgrade(db, oldVersion, newVersion, transaction) {
-        console.log(`Upgrading DB from version ${oldVersion} to ${newVersion}`);
-
-        if (!db.objectStoreNames.contains(CHATS_STORE_NAME)) {
-          const chatStore = db.createObjectStore(CHATS_STORE_NAME, {
-            keyPath: "id",
-            autoIncrement: true,
-          });
-          chatStore.createIndex("by_user_email", "user_email");
-          chatStore.createIndex("by_timestamp", "timestamp");
-        } else {
-          const chatStore = transaction.objectStore(CHATS_STORE_NAME);
-          if (!chatStore.indexNames.contains("by_user_email")) {
-            chatStore.createIndex("by_user_email", "user_email");
-          }
-          if (!chatStore.indexNames.contains("by_timestamp")) {
-            chatStore.createIndex("by_timestamp", "timestamp");
-          }
-        }
-
-        if (!db.objectStoreNames.contains(MESSAGES_STORE_NAME)) {
-          const messageStore = db.createObjectStore(MESSAGES_STORE_NAME, {
-            keyPath: "id",
-            autoIncrement: true,
-          });
-          messageStore.createIndex("by_chat_id", "chat_id");
-        } else {
-          const messageStore = transaction.objectStore(MESSAGES_STORE_NAME);
-          if (!messageStore.indexNames.contains("by_chat_id")) {
-            messageStore.createIndex("by_chat_id", "chat_id");
-          }
-        }
-      },
-    });
+  if (dbPromise) {
+    return dbPromise;
   }
+
+  dbPromise = openDB<ChatAppDBSchema>(DB_NAME, DB_VERSION, {
+    upgrade(db, oldVersion, newVersion, transaction) {
+      console.log(`Upgrading DB from version ${oldVersion} to ${newVersion}`);
+
+      if (!db.objectStoreNames.contains(CHATS_STORE_NAME)) {
+        const chatStore = db.createObjectStore(CHATS_STORE_NAME, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        chatStore.createIndex("by_user_email", "user_email");
+        chatStore.createIndex("by_timestamp", "timestamp");
+      } else {
+        const chatStore = transaction.objectStore(CHATS_STORE_NAME);
+        if (!chatStore.indexNames.contains("by_user_email")) {
+          chatStore.createIndex("by_user_email", "user_email");
+        }
+        if (!chatStore.indexNames.contains("by_timestamp")) {
+          chatStore.createIndex("by_timestamp", "timestamp");
+        }
+      }
+
+      if (!db.objectStoreNames.contains(MESSAGES_STORE_NAME)) {
+        const messageStore = db.createObjectStore(MESSAGES_STORE_NAME, {
+          keyPath: "id",
+          autoIncrement: true,
+        });
+        messageStore.createIndex("by_chat_id", "chat_id");
+      } else {
+        const messageStore = transaction.objectStore(MESSAGES_STORE_NAME);
+        if (!messageStore.indexNames.contains("by_chat_id")) {
+          messageStore.createIndex("by_chat_id", "chat_id");
+        }
+      }
+    },
+  });
+
   return dbPromise;
 }
 
-export async function getChat(
-  chatId: number,
-): Promise<ChatWithMessages | null> {
+async function getChat(chatId: number): Promise<ChatWithMessages | null> {
   const db = await getDb();
   const tx = db.transaction(
     [CHATS_STORE_NAME, MESSAGES_STORE_NAME],
@@ -90,7 +91,7 @@ export async function getChat(
   };
 }
 
-export async function getChats(userEmail: string): Promise<Chat[]> {
+async function getChats(userEmail: string): Promise<Chat[]> {
   const db = await getDb();
   const tx = db.transaction(CHATS_STORE_NAME, "readonly");
   const store = tx.objectStore(CHATS_STORE_NAME);
@@ -100,7 +101,7 @@ export async function getChats(userEmail: string): Promise<Chat[]> {
   return chats.filter((chat) => chat.id !== undefined) as Required<Chat>[];
 }
 
-export async function createChat(
+async function createChat(
   userEmail: string,
   name: string,
   initialMsgs: Omit<Message, "id" | "chat_id">[],
@@ -136,7 +137,7 @@ export async function createChat(
   return newChatId;
 }
 
-export async function getChatsWithMessages(
+async function getChatsWithMessages(
   userEmail: string,
 ): Promise<ChatWithMessages[]> {
   const db = await getDb();
@@ -173,7 +174,7 @@ export async function getChatsWithMessages(
   return results.filter((c) => c !== null) as ChatWithMessages[];
 }
 
-export async function getMessages(chatId: number): Promise<Message[]> {
+async function getMessages(chatId: number): Promise<Message[]> {
   const db = await getDb();
   const tx = db.transaction(MESSAGES_STORE_NAME, "readonly");
   const store = tx.objectStore(MESSAGES_STORE_NAME);
@@ -183,7 +184,7 @@ export async function getMessages(chatId: number): Promise<Message[]> {
   return messages;
 }
 
-export async function addMessage(
+async function addMessage(
   chatId: number,
   newMessage: Omit<Message, "id" | "chat_id">,
 ): Promise<Message | null> {
@@ -219,7 +220,7 @@ export async function addMessage(
   return { ...messageData, id: messageId };
 }
 
-export async function updateChatMessages(
+async function updateChatMessages(
   chatId: number,
   newMsgs: Omit<Message, "id" | "chat_id">[],
 ): Promise<void> {
@@ -265,7 +266,7 @@ export async function updateChatMessages(
   await tx.done;
 }
 
-export async function deleteChat(chatId: number): Promise<void> {
+async function deleteChat(chatId: number): Promise<void> {
   const db = await getDb();
   const tx = db.transaction(
     [CHATS_STORE_NAME, MESSAGES_STORE_NAME],
@@ -285,3 +286,16 @@ export async function deleteChat(chatId: number): Promise<void> {
 
   await tx.done;
 }
+
+const ChatDB = {
+  getChat,
+  getChats,
+  createChat,
+  getChatsWithMessages,
+  getMessages,
+  addMessage,
+  updateChatMessages,
+  deleteChat,
+};
+
+export default ChatDB;
