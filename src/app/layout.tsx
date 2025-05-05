@@ -59,7 +59,7 @@ export default async function RootLayout({
                   }}
                   logoutAction={async () => {
                     "use server";
-                    await signOut();
+                    await signOut({ redirectTo: "/" });
                   }}
                   session={session}
                 />
