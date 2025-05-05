@@ -1,4 +1,4 @@
-import Chat from "./components/Chat";
+import Chat from "./components/chat/Chat";
 import { auth } from "@/auth";
 import { Separator } from "@/components/ui/separator";
 
@@ -7,9 +7,13 @@ export default async function Home() {
 
   return (
     <>
-      <h1 className="text-4xl font-bold">Welcome to OpenRouter Chat</h1>
-      <Separator className="my-5" />
-      {!session?.user?.email && <div>You need to log in to use this chat.</div>}
+      <h1 className="text-4xl font-bold mb-5">Welcome to OpenRouter Chat</h1>
+      {!session?.user?.email && (
+        <>
+          <Separator className="mb-5" />
+          <div>You need to log in to use this chat.</div>
+        </>
+      )}
       {session?.user?.email && <Chat userEmail={session.user.email} />}
     </>
   );
