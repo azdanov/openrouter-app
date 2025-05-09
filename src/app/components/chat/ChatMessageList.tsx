@@ -1,58 +1,64 @@
 "use client";
 
-import { useChatMessages } from "@/app/hooks/useChatMessages";
+import { useChatContext } from "@/app/context/ChatContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Message } from "@/types";
-import { Separator } from "@radix-ui/react-dropdown-menu";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { Send } from "lucide-react";
+import { useLayoutEffect, useRef, useState } from "react";
 
-export const ChatMessageList = ({
-  currentChatId,
-}: {
-  currentChatId: number | null;
-}) => {
+export const ChatMessageList = () => {
   const {
+    currentChatId,
     currentMessages,
     isLoadingMessages,
     isSending,
     inputMessage,
     setInputMessage,
     handleSendMessage,
-    messagesEndRef,
-  } = useChatMessages(currentChatId);
+  } = useChatContext();
+
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isUserMessageSent, setIsUserMessageSent] = useState(false);
+
+  useLayoutEffect(() => {
+    if (isUserMessageSent && !isSending) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      setIsUserMessageSent(false);
+    }
+  }, [isSending, isUserMessageSent]);
 
   return (
-    <div className="w-3/4 flex flex-col">
+    <div className="flex flex-col">
       {currentChatId === null ? (
-        <div className="flex-grow flex items-center justify-center text-neutral-500">
+        <div className="flex flex-grow items-center justify-center text-neutral-500">
           Select a chat or create a new one to start messaging.
         </div>
       ) : (
         <>
-          <ScrollArea className="flex-grow p-4 space-y-4">
+          <div className="flex-grow space-y-4 p-4">
             {isLoadingMessages ? (
               <p className="text-center text-sm text-neutral-500">
                 Loading messages...
               </p>
             ) : (
               <>
-                {currentMessages.map((message, i) => (
+                {currentMessages.map((message) => (
                   <ChatMessageItem
-                    key={message.id ?? `msg-${currentChatId}-${i}`}
+                    key={`${currentChatId}-${message.id}`}
                     message={message}
                   />
                 ))}
                 <div ref={messagesEndRef} />
               </>
             )}
-          </ScrollArea>
+          </div>
           <Separator className="my-0" />
-          <div className="p-4 flex items-center">
+          <div className="flex items-center p-4">
             <Input
-              className="flex-grow text-base mr-3"
+              className="mr-3 flex-grow text-base"
               placeholder={
                 isLoadingMessages
                   ? "Loading..."
@@ -65,6 +71,7 @@ export const ChatMessageList = ({
               onKeyUp={(e) => {
                 if (e.key === "Enter" && !isSending && !isLoadingMessages) {
                   handleSendMessage();
+                  setIsUserMessageSent(true);
                 }
               }}
               disabled={isSending || isLoadingMessages}
@@ -96,7 +103,7 @@ const ChatMessageItem = ({ message }: { message: Message }) => (
     })}
   >
     <div
-      className={cn("max-w-[75%] rounded-lg py-2 px-4 whitespace-pre-wrap", {
+      className={cn("max-w-[75%] rounded-lg px-4 py-2 whitespace-pre-wrap", {
         "bg-indigo-600 text-white": message.role === "user",
         "bg-neutral-200 text-neutral-900": message.role === "assistant",
       })}

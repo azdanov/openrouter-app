@@ -1,29 +1,24 @@
+"use client";
+
+import { useChatContext } from "@/app/context/ChatContext";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Chat } from "@/types";
-import { ScrollArea } from "@radix-ui/react-scroll-area";
 import { Plus, Trash2 } from "lucide-react";
 
-interface ChatListProps {
-  chats: Chat[];
-  isLoadingChats: boolean;
-  currentChatId: number | null;
-  handleCreateChat: () => Promise<number | undefined>;
-  handleDeleteChat: (chatId?: number) => void;
-  handleSelectChat: (chatId?: number) => void;
-}
+export const ChatList = () => {
+  const {
+    chats,
+    isLoadingChats,
+    currentChatId,
+    handleSelectChat,
+    handleCreateChat,
+    handleDeleteChat,
+  } = useChatContext();
 
-export const ChatList = ({
-  chats,
-  isLoadingChats,
-  currentChatId,
-  handleCreateChat,
-  handleDeleteChat,
-  handleSelectChat,
-}: ChatListProps) => {
   return (
-    <div className="w-1/4 border-r flex flex-col">
-      <div className="p-2 border-b">
+    <div className="flex flex-col">
+      <div className="border-b p-2">
         <Button
           onClick={async () => {
             const newId = await handleCreateChat();
@@ -43,7 +38,7 @@ export const ChatList = ({
           )}
         </Button>
       </div>
-      <ScrollArea className="flex-grow p-2">
+      <div className="flex-grow p-2">
         {isLoadingChats && chats.length === 0 && (
           <p className="text-center text-sm text-neutral-500">
             Loading chats...
@@ -75,7 +70,7 @@ export const ChatList = ({
             />
           ))}
         </ul>
-      </ScrollArea>
+      </div>
     </div>
   );
 };
@@ -95,16 +90,16 @@ const ChatListItem = ({
 }) => (
   <li
     className={cn(
-      "p-2 mb-1 rounded cursor-pointer hover:bg-gray-100 flex justify-between items-center",
+      "mb-1 flex cursor-pointer items-center justify-between rounded p-2 hover:bg-gray-100",
       { "bg-indigo-100": isActive },
     )}
     onClick={onSelect}
   >
-    <span className="truncate flex-grow mr-2">{chat.name}</span>
+    <span className="mr-2 flex-grow truncate">{chat.name}</span>
     <Button
       variant="ghost"
       size="sm"
-      className="text-red-500 hover:text-red-700 hover:bg-red-100 p-1 h-auto"
+      className="h-auto p-1 text-red-500 hover:bg-red-100 hover:text-red-700"
       onClick={(e) => {
         e.stopPropagation();
         onDelete();

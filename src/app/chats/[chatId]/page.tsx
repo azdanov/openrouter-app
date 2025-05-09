@@ -2,23 +2,17 @@ import Chat from "@/app/components/chat/Chat";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 
-export default async function ChatPage({
-  params,
-}: {
-  params: Promise<{ chatId: string }>;
-}) {
+export default async function ChatPage() {
   const session = await auth();
 
   if (!session?.user?.email) {
     redirect("/");
   }
 
-  const chatId = parseInt((await params).chatId, 10);
-
   return (
-    <>
-      <h1 className="text-4xl font-bold mb-5">OpenRouter Chat</h1>
-      <Chat userEmail={session.user.email} initialChatId={chatId} />
-    </>
+    <div className="flex h-full flex-col">
+      <h1 className="mb-5 text-4xl font-bold">OpenRouter Chat</h1>
+      <Chat />
+    </div>
   );
 }

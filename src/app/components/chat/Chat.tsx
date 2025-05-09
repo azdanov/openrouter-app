@@ -2,34 +2,30 @@
 
 import { ChatList } from "@/app/components/chat/ChatList";
 import { ChatMessageList } from "@/app/components/chat/ChatMessageList";
-import { useChatList } from "@/app/hooks/useChatList";
+import { useChatContext } from "@/app/context/ChatContext";
+import { Separator } from "@/components/ui/separator";
+import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 
-interface ChatProps {
-  userEmail: string;
-  initialChatId?: number | null;
-}
+export default function Chat() {
+  const pathname = usePathname();
+  const chatId = pathname.split("/").pop();
 
-export default function Chat({ userEmail, initialChatId = null }: ChatProps) {
-  const {
-    chats,
-    isLoadingChats,
-    currentChatId,
-    handleCreateChat,
-    handleDeleteChat,
-    handleSelectChat,
-  } = useChatList(userEmail, initialChatId);
+  const { handleSelectChat } = useChatContext();
+
+  useEffect(() => {
+    if (chatId) {
+      handleSelectChat(Number.parseInt(chatId, 10));
+    } else {
+      handleSelectChat();
+    }
+  }, [handleSelectChat, chatId]);
 
   return (
-    <div className="flex flex-1 border rounded-md">
-      <ChatList
-        chats={chats}
-        isLoadingChats={isLoadingChats}
-        currentChatId={currentChatId}
-        handleCreateChat={handleCreateChat}
-        handleDeleteChat={handleDeleteChat}
-        handleSelectChat={handleSelectChat}
-      />
-      <ChatMessageList currentChatId={currentChatId} />
+    <div className="grid flex-1 grid-cols-[minmax(min-content,_400px)_min-content_auto] rounded-md border">
+      <ChatList />
+      <Separator orientation="vertical" />
+      <ChatMessageList />
     </div>
   );
 }
